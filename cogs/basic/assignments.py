@@ -5,14 +5,14 @@ from discord.ext import commands
 from discord.ext import tasks
 import datetime
 import asyncio
-from scripts import db
+from scripts.db import Database
 
 global indexes
 global user_assignments
 indexes = {}
 user_assignments = {}
 
-class Backend(db.Database):
+class Backend(Database):
     # get assignments by userID or courseID
     async def getAssignments(self, userID: int = None, courseID: int = None):
         query = """
@@ -214,8 +214,7 @@ class Assignments(commands.Cog): #name of your cog class, typically name it base
     assignments = app_commands.Group(name="assignments", description="All commands relating to assignments.")
     @assignments.command(name="browse", description="This is a command to view assignments available to you using the Assignment Viewer.") #this is what names your command in the tree
     async def browse(self, interaction: discord.Interaction, id: str = None): #function the command will perform
-        if interaction.guild is not'
-        ????????????None: #check if we are in a dm
+        if interaction.guild is not None: #check if we are in a dm
             await interaction.response.send_message("This command is only available in Direct Messages.", ephemeral=True) 
             return
         if id is None:

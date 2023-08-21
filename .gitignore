@@ -3,4 +3,5 @@ bot-env/*
 database.db-journal
 __pycache__/
 *.py[cod]
+set_token.fish
 

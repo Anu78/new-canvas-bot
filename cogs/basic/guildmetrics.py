@@ -52,6 +52,8 @@ class Backend(db.Database):
             await self.close(db)
 
         return True
+    async def compareGuildCourses(parameter_list):
+        pass
 
 class GuildMetrics(commands.Cog): #name of your cog class, typically name it based off of your .py file
     def __init__(self, client):

@@ -4,10 +4,10 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext import tasks
 from discord.interactions import Interaction
-from scripts import db
+# from scripts.db import Database
 from scripts.encrypt import Encrypt
 
-class Backend(db.Database):
+class Backend():
     # check if user is registered
     async def isUser(self, userID):
         query = """
@@ -172,6 +172,25 @@ class Backend(db.Database):
         
         return True
     
+    async def updateNotifs(self, userid, notif):
+        query = """
+            UPDATE users
+            SET notif_freq = ?
+            WHERE userid = ?
+        """
+        
+        params = (notif, userid)
+
+        try:
+            db = await self.open()
+            async with db.execute(query, params) as cursor:
+                pass
+            await db.commit()
+        except Exception as e:
+            return e
+        finally:
+            await self.close(db)
+
 class UserSetup(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
