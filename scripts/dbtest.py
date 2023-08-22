@@ -1,7 +1,7 @@
-import db
+import scripts.db_api as db_api
 import asyncio
 
-class Backend(db.Database):
+class Backend(db_api.Database):
     # get assignments by userID or courseID
     async def getAssignments(self, userID: int = None, courseID: int = None):
         query = """

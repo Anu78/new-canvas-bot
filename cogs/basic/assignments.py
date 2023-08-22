@@ -5,7 +5,7 @@ from discord.ext import commands
 from discord.ext import tasks
 import datetime
 import asyncio
-from scripts.db import Database
+from scripts.db_api import Database
 
 global indexes
 global user_assignments

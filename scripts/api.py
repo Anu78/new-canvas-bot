@@ -3,137 +3,146 @@ from datetime import datetime, timedelta
 import aiohttp
 import asyncio
 import time
-import db
+import scripts.db_api as db_api 
 
-current_term = "Fall 2023"
-baseURL = "https://canvas.instructure.com/api/v1"
+class Canvas():
+    current_term = "Fall 2023"
+    baseURL = "https://canvas.instructure.com/api/v1"
 
-token = lambda userID: db.getToken(userID)
 
-async def getUserID(token):
-    header = {'Authorization': 'Bearer ' + token}
-    r = requests.get(
-        f"{baseURL}/users/self", headers=header)
-    r = r.json()
-    return r['id']
+    token = lambda userID: db_api.getToken(userID)
 
-async def verifyToken(token):
-    header = {'Authorization': 'Bearer ' + token}
-    r = requests.get(
-        f"{baseURL}/users/self", headers=header)
+    async def getUserID(self, token):
+        header = {'Authorization': 'Bearer ' + token}
+        r = requests.get(
+            f"{self.baseURL}/users/self", headers=header)
+        r = r.json()
+        return r['id']
 
-    return (not r.status_code == 401, r.json()['short_name'])
+    async def verifyToken(self, token):
+        header = {'Authorization': 'Bearer ' + token}
+        r = requests.get(
+            f"{self.baseURL}/users/self", headers=header)
 
-def convertTime(time):
-    newtime = time.replace("T", " ")
-    newtime = newtime.replace("Z", "")  # ? remove excess letters
+        return (not r.status_code == 401, r.json()['short_name'])
 
-    time_object = datetime.strptime(newtime, '%Y-%m-%d %H:%M:%S')
-    time_object -= timedelta(hours=5)  # ? adjust for time difference (EST)
+    def convertTime(time):
+        newtime = time.replace("T", " ")
+        newtime = newtime.replace("Z", "")  # ? remove excess letters
 
-    return time_object.timestamp()
+        time_object = datetime.strptime(newtime, '%Y-%m-%d %H:%M:%S')
+        time_object -= timedelta(hours=5)  # ? adjust for time difference (EST)
 
-async def getCourses(userID: None, auth_token: None):
-    if not userID and not auth_token: return
+        return time_object.timestamp()
 
-    if userID:
-        header = {'Authorization': 'Bearer ' + token(userID)}
-    else:
-        header = {'Authorization': 'Bearer ' + auth_token}
-    data = {
-        "enrollment_type": "student",
-        "enrollment_state": "active",
-        "per_page": 30,
-        "include[]": "term"
-    }
-    r = requests.get(
-        f"{baseURL}users/{userID}/courses", headers=header, data=data).json()
+    async def getCourses(self, userID: None, auth_token: None):
+        if not userID and not auth_token: return
 
-    courses = []
+        if userID:
+            header = {'Authorization': 'Bearer ' + self.token(userID)}
+        else:
+            header = {'Authorization': 'Bearer ' + auth_token}
+        data = {
+            "enrollment_type": "student",
+            "enrollment_state": "active",
+            "per_page": 30,
+            "include[]": "term"
+        }
+        r = requests.get(
+            f"{self.baseURL}users/{userID}/courses", headers=header, data=data).json()
 
-    for i in range(len(r)-1):
-        if r[i]["term"]["name"] == current_term:
-            courses.append(r[i])
+        courses = []
 
-    
+        for i in range(len(r)-1):
+            if r[i]["term"]["name"] == self.current_term:
+                courses.append(r[i])
 
-    return courses
+        
 
-async def getAssignments(userID):
-    header = {'Authorization': 'Bearer ' + token(userID)}
-    url = "https://canvas.instructure.com/api//v1/users/{}/courses/{}/assignments"
-    params = {
-        "per_page": 30,
-    }
+        return courses
 
-    response = requests.get(f"{baseURL}/users/{userID}/todo",headers=header,params=params)
-
-    if response.status_code == 200:
-        to_do_list = response.json()
-
-        # Display the fetched to-do items
-        for idx, item in enumerate(to_do_list, start=1):
-            assignment = item.get("assignment")
-            if assignment:
-                assignment_name = assignment.get("name")
-                due_date = assignment.get("due_at")
-                course_id = assignment.get("course_id")
-                print(f"{idx}. Assignment: {assignment_name}, Due Date: {due_date}, Course ID: {course_id}")
-    else:
-        print(f"Error: {response.status_code}")
-
-# get current grades of student
-async def getGrades(courses, userID):
-    header = {'Authorization': 'Bearer ' + token(userID)}
-    data = {
-        "per_page": 15,
-        "state[]": "active"
-    }
-    grades = []
-    r = requests.get(
-        f"{baseURL}/users/{userID}/enrollments", headers=header, data=data)
-    r = r.json()
-
-    for course in courses.items():
-        for enrollment in r:
-            if enrollment['course_id'] == course[1]['id']:
-                grades.append({
-                    "course": course[0],
-                    "grade": enrollment["grades"]['current_score']
-                })
-    return grades
-
-async def submitAssignment(userID, courseID, assignmentID, fileURL):
-    header = {'Authorization': 'Bearer ' + token(userID)}
-    
-    response = requests.get(fileURL)
-
-    if response.status_code == 200:
-        fileContent = response.content
-
-        files = {
-            "submission[file]": ("filename.txt", fileContent),
+    async def getAssignments(self, userID):
+        header = {'Authorization': 'Bearer ' + self.token(userID)}
+        url = "https://canvas.instructure.com/api//v1/users/{}/courses/{}/assignments"
+        params = {
+            "per_page": 30,
         }
 
-        response = requests.post(
-            f"{baseURL}/courses/{courseID}/assignments/{assignmentID}/submissions",
-            headers=header,
-            files=files
-        )
+        response = requests.get(f"{self.baseURL}/users/{userID}/todo",headers=header,params=params)
 
         if response.status_code == 200:
-            submissionInfo = response.json()
-            return True
+            to_do_list = response.json()
+
+            # Display the fetched to-do items
+            for idx, item in enumerate(to_do_list, start=1):
+                assignment = item.get("assignment")
+                if assignment:
+                    assignment_name = assignment.get("name")
+                    due_date = assignment.get("due_at")
+                    course_id = assignment.get("course_id")
+                    print(f"{idx}. Assignment: {assignment_name}, Due Date: {due_date}, Course ID: {course_id}")
         else:
-            return False
+            print(f"Error: {response.status_code}")
 
-# if token does not have overlapping courses  
-async def aggregateOne(token, courses):
-    # get all courses associated with token
-    userCourses = getCourses(token=token)
+    # get current grades of student
+    async def getGrades(self, courses, userID):
+        header = {'Authorization': 'Bearer ' + self.token(userID)}
+        data = {
+            "per_page": 15,
+            "state[]": "active"
+        }
+        grades = []
+        r = requests.get(
+            f"{self.baseURL}/users/{userID}/enrollments", headers=header, data=data)
+        r = r.json()
 
-    # compare with the courses already present. courses is list of IDs
-    
-    # return courses that are not present (name and ID) 
+        for course in courses.items():
+            for enrollment in r:
+                if enrollment['course_id'] == course[1]['id']:
+                    grades.append({
+                        "course": course[0],
+                        "grade": enrollment["grades"]['current_score']
+                    })
+        return grades
 
-    pass
+    async def submitAssignment(self, userID, courseID, assignmentID, fileURL):
+        header = {'Authorization': 'Bearer ' + self.token(userID)}
+        
+        response = requests.get(fileURL)
+
+        if response.status_code == 200:
+            fileContent = response.content
+
+            files = {
+                "submission[file]": ("filename.txt", fileContent),
+            }
+
+            response = requests.post(
+                f"{self.baseURL}/courses/{courseID}/assignments/{assignmentID}/submissions",
+                headers=header,
+                files=files
+            )
+
+            if response.status_code == 200:
+                submissionInfo = response.json()
+                return True
+            else:
+                return False
+
+    #  if token does not have overlapping courses  
+    async def aggregateOne(self, token, courses):
+        # get all courses associated with token
+        userCourses = exit
+
+        # compare with the courses already present. courses is list of IDs
+        
+        # return courses that are not present (name and ID) 
+
+        pass
+
+
+
+def main():
+    canvas = Canvas()
+
+    test = Canvas()

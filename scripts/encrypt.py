@@ -2,7 +2,6 @@ from cryptography.fernet import Fernet
 import os
 import ctypes
 from dotenv import load_dotenv
-import db
 
 env_directory = "../.env"
 load_dotenv(dotenv_path=env_directory)

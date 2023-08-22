@@ -4,10 +4,11 @@ from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext import tasks
 from discord.interactions import Interaction
-# from scripts.db import Database
+from scripts.db_api import Database
 from scripts.encrypt import Encrypt
+from scripts.api import Canvas
 
-class Backend():
+class Backend(Database):
     # check if user is registered
     async def isUser(self, userID):
         query = """
@@ -203,8 +204,9 @@ class UserSetup(discord.ui.View):
         token = ui.TextInput(style=discord.TextStyle.short, label="Token", placeholder="Canvas Access Token", required=True)
         async def on_submit(self, interaction: discord.Interaction):
             encrypted_token = Encrypt().encrypt(self.token.value)
-            decrypted_token = Encrypt().decrypt(encrypted_token)
-            await interaction.response.send_message(f"Pretend I sent {encrypted_token} to the database.\nWe can decode it to look like: {decrypted_token}", ephemeral=True)
+            await Backend.updateToken(userid=interaction.user.id, token=encrypted_token)
+            
+            await interaction.response.send_message(f"Token was successfuly updated.", ephemeral=True)
             return 
 
     @discord.ui.button(style=discord.ButtonStyle.primary, label="Apply Token", emoji="⚙️", custom_id="applyToken", row=1)
@@ -212,7 +214,7 @@ class UserSetup(discord.ui.View):
         await interaction.response.send_modal(self.Modal())
         return
 
-class ReminderSetup(discord.ui.View):
+class ReminderSetup(discord.ui.View): 
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(self.FrequencySelect())
@@ -229,7 +231,7 @@ class ReminderSetup(discord.ui.View):
                 discord.SelectOption(label="1 week before due", value=64, emoji="⏰"),
                 discord.SelectOption(label="2 weeks before due", value=128, emoji="⏰"),
                 discord.SelectOption(label="1 month before due", value=256, emoji="⏰"),
-            ]
+            ]   
             super().__init__(placeholder="📅 When should we remind you?", min_values=0, max_values=9, options=options)
 
         async def callback(self, interaction: discord.Interaction):
@@ -239,6 +241,7 @@ class ReminderSetup(discord.ui.View):
             for value in self.values:
                 value = int(value)
                 bit = bit + value
+            await Backend.updateNotifs(userid=interaction.user.id, notif=bit)
             await interaction.followup.send(f"Selected {self.values}, total of bits are {bit}", ephemeral=True)
 
 class Setup(commands.Cog): #name of your cog class, typically name it based off of your .py file

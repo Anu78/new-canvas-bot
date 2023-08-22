@@ -3,9 +3,9 @@ from discord import app_commands, ui
 from discord.app_commands import Choice
 from discord.ext import commands
 from discord.ext import tasks
-from scripts import db
+from scripts import db_api
 
-class Backend(db.Database):
+class Backend(db_api.Database):
     # registers guild and admin's courses
     async def registerGuild(self, guildID):
         query = """
