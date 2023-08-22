@@ -9,8 +9,10 @@ from scripts import db
 
 global indexes
 global user_assignments
+global uploads
 indexes = {}
 user_assignments = {}
+uploads = {}
 
 class Backend(db.Database):
     # get assignments by userID or courseID
@@ -168,7 +170,8 @@ class Views():
             for type in types:
                 allowed_extensions.append(str(type).lower())
             await interaction.response.send_message(f"Please upload a file via Discord Attachments <t:{future}:R>")
-            await asyncio.sleep(wait_time)
+            timer = await asyncio.sleep(wait_time)
+            uploads[interaction.user.id] = timer
             attachment = None
             async for message in interaction.channel.history(limit=1):
                 if len(message.attachments) > 0: 
@@ -237,6 +240,28 @@ class Assignments(commands.Cog): #name of your cog class, typically name it base
             return
         return
 
+    @commands.Cog.listener()
+    async def on_message(message):
+        if message.guild is not None:
+            return
+        
+        if message.channel == discord.ChannelType.private:
+            try:
+                check = uploads.get(message.author.id, False)
+                await asyncio.cancel(check)
+                attachment = None
+                async for message in message.channel.history(limit=1):
+                    if len(message.attachments) > 0: 
+                        attachment = message.attachments[0].url
+                        type = attachment.split(".")[-1]
+                if attachment is None:
+                    await message.edit_original_response(content="Time expired for upload. Please use the command again.")
+                elif attachment is not None and type in allowed_extensions:
+                    await message.edit_original_response(content=f"Your file is located at: {attachment}. It has a type of {type}")
+                elif attachment is not None and type not in allowed_extensions:
+                    await message.edit_original_response(content=f"You uploaded a file of the wrong type.")
+            except Exception as e:
+                return
 
 async def setup(client):
     #guild = client.get_guild(1038598934265864222) #uncomment this and the comment on line 18 to sync the cog to a specific guild
