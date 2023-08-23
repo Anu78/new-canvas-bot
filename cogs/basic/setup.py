@@ -6,7 +6,7 @@ from discord.ext import tasks
 from discord.interactions import Interaction
 from scripts.db_api import Database
 from scripts.encrypt import Encrypt
-from scripts.api import Canvas
+from scripts.canvas import Canvas
 
 class Backend(Database):
     # check if user is registered
