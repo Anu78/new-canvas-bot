@@ -5,7 +5,9 @@ from discord.ext import commands
 from discord.ext import tasks
 from discord.interactions import Interaction
 from scripts import db
-from scripts.encrypt import Encrypt
+from scripts import encrypt
+
+Encrypt = encrypt.Encrypt().Encrypt
 
 class Backend(db.Database):
     # check if user is registered
